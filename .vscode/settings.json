@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "times.h": "c",
+        "system.h": "c",
+        "segment.h": "c",
+        "SCHED.H": "cpp"
+    }
+}

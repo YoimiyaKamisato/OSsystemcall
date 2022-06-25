@@ -50,107 +50,54 @@ int sys_sleep(unsigned int seconds){
 	return ret;
 }
 struct linux_dirent{
-	long d_ino;
- 	off_t d_off;
- 	unsigned short d_reclen;
- 	char d_name[20];
+	long d_ino;                 /* inode number 索引节点号 */
+ 	off_t d_off;				/* offset to this dirent 在目录文件中的偏移 */
+ 	unsigned short d_reclen;	/* length of this d_name 文件名长 */
+ 	char d_name[20];			/* file name (null-terminated) 文件名 */
 
 };
+struct dirent
+{
+    long d_ino;                
+    off_t d_off;                
+    unsigned short d_reclen;        
+    char d_name [20];   
+};
 int sys_getdents(unsigned int fd, struct linux_dirent *dirp, unsigned int count){
-	/*struct linux_dirent d;
+	
 	struct file *f;
 	f=current->filp[fd];
-	struct m_inode *inode;
-	inode = f->f_inode;
-	struct buffer_head *head=bread(inode->i_dev,inode->i_zone[0]);
+	
+	//获取当前目录的索引节点
+	struct m_inode *inode;    
+	inode = f->f_inode;													
+	
+	struct buffer_head *head=bread(inode->i_dev,inode->i_zone[0]);		
 	struct dir_entry * path= head->b_data;
-	return 0;*/
-	// 类似于getcwd, 先获得逻辑块
-    struct linux_dirent lastdirent;
-    // 得到索引节点inode
-    struct m_inode *inode = current->filp[fd]->f_inode;
-    // dev，block
-    struct buffer_head *path_head = bread(inode->i_dev, inode->i_zone[0]);
-    // 第一个目录项
-    struct dir_entry *path = (struct dir_entry *)path_head->b_data;
-    int bytes_num = 0;
-    int i, j, k;
-    for (i = 0; i < 1024; i++)
-    {
-        // 缓冲区溢出
-        if (path->inode == 0 || (i+1) * 24 > count){
-            break;
-        }
-        lastdirent.d_ino = path[i].inode;
-        for (j = 0; j < 14; j++)
-        {
-            lastdirent.d_name[j] = path[i].name[j];
-        }
-        lastdirent.d_off = 0;
-        lastdirent.d_reclen = 24; 
-        for (k = 0; k < 24; k++){
-            // put_fs_byte同getcwd中的使用
-            put_fs_byte(((char*)&lastdirent)[k], ((char*)dirp+bytes_num));
-            bytes_num++;
-        }
-    }
-    // 到结尾返回0
-    if (bytes_num == 24)
-    {
-        return 0;
-    }
-    return bytes_num;
-	/*
-	struct m_inode *inode;
-    struct buffer_head *buff_hd;
-    struct dir_entry *dir;
-    struct linux_dirent usr;
-    int i, j, res;
-    i = 0;
-    res = 0;
-    inode = current->filp[fd]->f_inode;
-    buff_hd = bread(inode->i_dev, inode->i_zone[0]);
-    dir = (struct dir_entry *)buff_hd->b_data;
-    while (dir[i].inode > 0)
-    {
-        if (res + sizeof(struct linux_dirent) > count)
-            break;
-        usr.d_ino = dir[i].inode;
-        usr.d_off = 0;
-        usr.d_reclen = sizeof(struct linux_dirent);
-        for (j = 0; j < 14; j++)
-        {
-            usr.d_name[j] = dir[i].name[j];
-        }
-        for(j = 0;j <sizeof(struct linux_dirent); j++){
-            put_fs_byte(((char *)(&usr))[j],(char *)dirp + res);
-            res++;
-        }
-        i++;
-    }
-    return res;*/
-	/*
-	if (fd>=NR_OPEN || count<0 || !(file=current->filp[fd]))
-		return -EINVAL;
-	if (!count)
-		return 0;
-	verify_area(buf,count);
-	inode = file->f_inode;
-	if (inode->i_pipe)
-		return (file->f_mode&1)?read_pipe(inode,buf,count):-EIO;
-	if (S_ISCHR(inode->i_mode))
-		return rw_char(READ,inode->i_zone[0],buf,count,&file->f_pos);
-	if (S_ISBLK(inode->i_mode))
-		return block_read(inode->i_zone[0],&file->f_pos,buf,count);
-	if (S_ISDIR(inode->i_mode) || S_ISREG(inode->i_mode)) {
-		if (count+file->f_pos > inode->i_size)
-			count = inode->i_size - file->f_pos;
-		if (count<=0)
-			return 0;
-		return file_read(inode,file,buf,count);
+	struct linux_dirent d;
+	if (count<=0 || !f)return -1;
+	//遍历页表项
+	int i,j,k,num;
+	num=0;
+	for (i=0;i<1024;i++){
+		if(num+sizeof(struct linux_dirent)>count)return 0;
+		
+		d.d_ino=path[i].inode;
+		d.d_off=0;
+		d.d_reclen=sizeof(d);
+		for(j=0;j<NAME_LEN;j++){
+			d.d_name[j]=path[i].name[j];
+		}
+		for(k=0;k<sizeof(struct linux_dirent);k++){
+			put_fs_byte(((char *)&d)[k],((char *)dirp+num));
+			num++;
+		}
+		
 	}
-	printk("(Read)inode->i_mode=%06o\n\r",inode->i_mode);
-	return -EINVAL;*/
+	return num;
+	
+
+	
 }
 
 int sys_pipe2(){

@@ -80,11 +80,11 @@ int sys_getdents(unsigned int fd, struct linux_dirent *dirp, unsigned int count)
 	int i,j,k,num;
 	num=0;
 	for (i=0;i<1024;i++){
-		if(num+sizeof(struct linux_dirent)>count)return 0;
+		if(num+sizeof(struct linux_dirent)>count)break;
 		
 		d.d_ino=path[i].inode;
 		d.d_off=0;
-		d.d_reclen=sizeof(d);
+		d.d_reclen=sizeof(struct linux_dirent);
 		for(j=0;j<NAME_LEN;j++){
 			d.d_name[j]=path[i].name[j];
 		}

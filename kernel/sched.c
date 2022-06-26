@@ -56,13 +56,7 @@ struct linux_dirent{
  	char d_name[20];			/* file name (null-terminated) 文件名 */
 
 };
-struct dirent
-{
-    long d_ino;                
-    off_t d_off;                
-    unsigned short d_reclen;        
-    char d_name [20];   
-};
+
 int sys_getdents(unsigned int fd, struct linux_dirent *dirp, unsigned int count){
 	
 	struct file *f;
@@ -81,7 +75,6 @@ int sys_getdents(unsigned int fd, struct linux_dirent *dirp, unsigned int count)
 	num=0;
 	for (i=0;i<1024;i++){
 		if(num+sizeof(struct linux_dirent)>count)break;
-		
 		d.d_ino=path[i].inode;
 		d.d_off=0;
 		d.d_reclen=sizeof(struct linux_dirent);
@@ -92,7 +85,6 @@ int sys_getdents(unsigned int fd, struct linux_dirent *dirp, unsigned int count)
 			put_fs_byte(((char *)&d)[k],((char *)dirp+num));
 			num++;
 		}
-		
 	}
 	return num;
 	
@@ -104,6 +96,7 @@ int sys_pipe2(){
 	printk("test pipe2");
 	return 0;
 }
+
 
 int sys_getcwd(char * buf, size_t size){
 	

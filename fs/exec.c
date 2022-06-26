@@ -521,6 +521,12 @@ restart_interp:
 		put_fs_byte(0,(char *) (i++));
 	eip[0] = ex.a_entry;		/* eip, magic happens :-) */
 	eip[3] = p;			/* stack pointer */
+	//提前分配页面
+	unsigned long new;
+	unsigned long last=(current->start_code+current->brk-1)&0xfffff000;
+	for (new=current->start_code;((new)&0xfffff000)<=last;new+=4096){
+		do_no_page2(new);
+	}
 	return 0;
 exec_error2:
 	iput(inode);

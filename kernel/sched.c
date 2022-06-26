@@ -31,15 +31,8 @@
 #include <sys/stat.h>
 #include <errno.h>
 
-
-
-
-
-
 #define _S(nr) (1<<((nr)-1))
 #define _BLOCKABLE (~(_S(SIGKILL) | _S(SIGSTOP)))
-
-
 
 
 int sys_sleep(unsigned int seconds){
@@ -99,8 +92,51 @@ int sys_pipe2(){
 
 
 int sys_getcwd(char * buf, size_t size){
+	struct m_inode * inode=current->pwd;                          //当前工作目录的索引节点
+	struct m_inode *rootnode=current->root;                       //根目录
+	struct buffer_head *bh=bread(inode->i_dev,inode->i_zone[0]);
+	struct dir_entry *de=(struct dir_entry*)bh->b_data;
+	unsigned short tmp0,tmp1,tmp2;
+	int len=sizeof(struct dir_entry);
+	char path1[128]={0},path2[128]={0};
 	
-	return 0;
+	if(inode==rootnode)
+		strcpy(path1,"/");
+	else{
+		tmp0=de->inode;
+		de++;
+		tmp1=de->inode;
+	while(inode!=rootnode){											//根据索引节点的内容，找到父目录的位置
+		inode=iget(current->pwd->i_dev,tmp1);                       //打开父目录的数据块，在父目录里遍历目录项
+		bh=bread(inode->i_dev,inode->i_zone[0]);					//比对索引号得到名字，以此类推，一直到根目录
+		de=(struct dir_entry *)bh->b_data;							
+		tmp2=(de+1)->inode;
+		int i=0;
+		while(i<inode->i_size){
+			if(de->inode==tmp0){
+				strcpy(path1,"/");
+				strcat(path1,de->name);
+				strcat(path1,path2);
+				strcpy(path2,path1);
+				break;
+			}
+			de++;
+			i+=len;
+		}
+		tmp0=tmp1;
+		tmp1=tmp2;
+	}
+	brelse(bh);
+	}
+
+	if(strlen(path2)>size) return NULL;
+	int i;
+	for(i = 0; i<path2[i]; i++){
+		put_fs_byte(path2[i], buf + i);
+	}
+	return (long)buf;
+
+
 	
 }
 void show_task(int nr,struct task_struct * p)
